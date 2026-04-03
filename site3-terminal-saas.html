@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coderift — Ship Faster. Break Less.</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,300&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #080c10;
+  --bg2: #0d1117;
+  --surface: rgba(255,255,255,0.035);
+  --surface2: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e2e8f0;
+  --muted: rgba(226,232,240,0.4);
+  --green: #22d3a5;
+  --green-glow: rgba(34,211,165,0.15);
+  --green-dim: rgba(34,211,165,0.5);
+  --amber: #f59e0b;
+  --blue: #38bdf8;
+  --red: #f87171;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ── NOISE ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+}
+
+/* ── GRID BACKGROUND ── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(34,211,165,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,165,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+/* ── GLOW BLOBS ── */
+.glow-1, .glow-2, .glow-3 {
+  position: fixed; border-radius: 50%;
+  pointer-events: none; z-index: 0;
+  animation: blobFloat 18s ease-in-out infinite;
+}
+.glow-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(34,211,165,0.07), transparent 70%);
+  top: -200px; left: -100px;
+}
+.glow-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(56,189,248,0.06), transparent 70%);
+  top: 40%; right: -150px;
+  animation-delay: -8s;
+}
+.glow-3 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(245,158,11,0.05), transparent 70%);
+  bottom: 10%; left: 20%;
+  animation-delay: -4s;
+}
+@keyframes blobFloat {
+  0%,100% { transform: translate(0,0); }
+  33% { transform: translate(30px,-20px); }
+  66% { transform: translate(-20px,15px); }
+}
+
+/* ── WRAPPER ── */
+.page { position: relative; z-index: 1; }
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 2.5rem;
+  background: rgba(8,12,16,0.85);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  animation: slideDown 0.5s ease both;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity:0; }
+  to   { transform: translateY(0); opacity:1; }
+}
+
+.nav-brand {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.brand-mark {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-size: 0.75rem; font-weight: 800;
+  color: #080c10;
+  box-shadow: 0 0 20px rgba(34,211,165,0.3);
+}
+.brand-name {
+  font-family: var(--sans); font-size: 1.1rem; font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--text), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.nav-links { display: flex; align-items: center; gap: 2.5rem; }
+.nav-links a {
+  text-decoration: none; color: var(--muted); font-size: 0.75rem;
+  letter-spacing: 0.05em; transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+
+.nav-actions { display: flex; align-items: center; gap: 1rem; }
+
+.btn-ghost {
+  background: none; border: 1px solid var(--border2); color: var(--text);
+  padding: 0.45rem 1.1rem; border-radius: 6px; font-family: var(--mono);
+  font-size: 0.72rem; cursor: pointer; transition: all 0.2s;
+}
+.btn-ghost:hover { background: var(--surface2); border-color: var(--green-dim); color: var(--green); }
+
+.btn-primary {
+  background: var(--green); color: #080c10; border: none;
+  padding: 0.5rem 1.2rem; border-radius: 6px; font-family: var(--sans);
+  font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  transition: all 0.25s; letter-spacing: 0.03em;
+  box-shadow: 0 0 20px rgba(34,211,165,0.25);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 35px rgba(34,211,165,0.45);
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 8rem 2.5rem 6rem;
+  max-width: 900px; margin: 0 auto;
+  text-align: center;
+  animation: fadeUp 0.8s 0.2s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(30px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  background: rgba(34,211,165,0.07); border: 1px solid rgba(34,211,165,0.15);
+  color: var(--green); font-size: 0.7rem; letter-spacing: 0.12em;
+  padding: 0.35rem 1rem; border-radius: 100px; margin-bottom: 2.5rem;
+}
+.eyebrow-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: eyePulse 2s ease infinite;
+}
+@keyframes eyePulse {
+  0%,100% { opacity:1; } 50% { opacity:0.3; }
+}
+
+.hero h1 {
+  font-family: var(--sans); font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 800; line-height: 1.05; letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+}
+.h1-line2 {
+  display: block;
+  background: linear-gradient(90deg, var(--green) 0%, var(--blue) 60%, var(--amber) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.hero-sub {
+  color: var(--muted); font-family: var(--mono); font-size: 0.95rem;
+  font-weight: 300; line-height: 1.8; max-width: 540px; margin: 0 auto 2.5rem;
+}
+
+.hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
+
+.btn-hero {
+  background: var(--green); color: #080c10; border: none;
+  padding: 0.85rem 2rem; border-radius: 8px; font-family: var(--sans);
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  transition: all 0.25s; letter-spacing: 0.02em;
+  box-shadow: 0 0 30px rgba(34,211,165,0.3), 0 4px 20px rgba(0,0,0,0.4);
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.btn-hero:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(34,211,165,0.5), 0 8px 30px rgba(0,0,0,0.4); }
+
+.btn-outline {
+  background: none; color: var(--text); border: 1px solid var(--border2);
+  padding: 0.85rem 2rem; border-radius: 8px; font-family: var(--mono);
+  font-size: 0.85rem; cursor: pointer; transition: all 0.25s;
+  backdrop-filter: blur(10px);
+}
+.btn-outline:hover { border-color: var(--green-dim); color: var(--green); background: var(--green-glow); }
+
+.hero-social { display: flex; align-items: center; justify-content: center; gap: 2rem; font-size: 0.7rem; color: var(--muted); }
+.hero-social-divider { width: 1px; height: 16px; background: var(--border2); }
+.hero-stat strong { color: var(--text); font-family: var(--sans); font-size: 0.85rem; }
+
+/* ── TERMINAL WINDOW ── */
+.terminal-showcase {
+  max-width: 860px; margin: 0 auto 8rem; padding: 0 2.5rem;
+  animation: fadeUp 0.8s 0.5s ease both;
+}
+
+.window {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04),
+              0 0 60px rgba(34,211,165,0.06);
+}
+
+.window-bar {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.85rem 1.2rem;
+  background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border);
+}
+.wdot { width: 12px; height: 12px; border-radius: 50%; }
+.wd-r { background: #ff5f57; }
+.wd-y { background: #febc2e; }
+.wd-g { background: #28c840; }
+.window-title {
+  flex: 1; text-align: center; font-size: 0.65rem; color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.window-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+.tab {
+  padding: 0.5rem 1.2rem; font-size: 0.65rem; color: var(--muted);
+  border-right: 1px solid var(--border); cursor: pointer;
+  transition: all 0.2s; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.5rem;
+}
+.tab.active { color: var(--text); background: var(--bg2); }
+.tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+.window-body { padding: 1.5rem; }
+
+.code-line { display: flex; align-items: baseline; gap: 1.2rem; margin-bottom: 0.35rem; font-size: 0.8rem; line-height: 1.7; }
+.ln { color: rgba(255,255,255,0.15); font-size: 0.7rem; width: 20px; text-align: right; user-select: none; flex-shrink: 0; }
+.c-comment { color: rgba(34,211,165,0.35); font-style: italic; }
+.c-kw { color: #c792ea; }
+.c-fn { color: var(--blue); }
+.c-str { color: var(--amber); }
+.c-num { color: #f78c6c; }
+.c-sym { color: var(--green-dim); }
+.c-var { color: var(--text); }
+.c-type { color: var(--green); }
+.c-obj { color: #e2e8f0; }
+.c-blank { height: 0.35rem; }
+
+.window-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 1.2rem; border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.02); font-size: 0.6rem; color: var(--muted);
+}
+.wf-status { display: flex; gap: 1.5rem; }
+.wf-item { display: flex; align-items: center; gap: 0.4rem; }
+.wf-green { color: var(--green); }
+
+/* ── SECTION SHARED ── */
+section { padding: 6rem 2.5rem; }
+.section-inner { max-width: 1100px; margin: 0 auto; }
+.section-tag {
+  font-size: 0.65rem; letter-spacing: 0.2em; color: var(--green);
+  text-transform: uppercase; margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.section-tag::before { content: '//'; color: var(--green-dim); }
+
+.section-h {
+  font-family: var(--sans); font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  margin-bottom: 1rem;
+}
+.section-sub { color: var(--muted); font-size: 0.85rem; line-height: 1.8; max-width: 480px; }
+
+/* ── FEATURES ── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  margin-top: 4rem;
+}
+
+.feat-card {
+  background: var(--bg2); padding: 2rem;
+  position: relative; overflow: hidden;
+  transition: background 0.3s;
+}
+.feat-card:hover { background: rgba(34,211,165,0.03); }
+.feat-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(34,211,165,0.04) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.feat-card:hover::after { opacity: 1; }
+
+.feat-card + .feat-card { border-left: 1px solid var(--border); }
+.feat-row2 { border-top: 1px solid var(--border); }
+
+.feat-icon {
+  width: 40px; height: 40px; border-radius: 8px; margin-bottom: 1.2rem;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  border: 1px solid var(--border);
+}
+.fi-g { background: rgba(34,211,165,0.08); border-color: rgba(34,211,165,0.2); }
+.fi-b { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.2); }
+.fi-a { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); }
+
+.feat-title { font-family: var(--sans); font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; }
+.feat-desc { color: var(--muted); font-size: 0.75rem; line-height: 1.8; }
+
+.feat-code {
+  margin-top: 1.2rem; padding: 0.75rem; background: rgba(0,0,0,0.3);
+  border-radius: 6px; border: 1px solid var(--border); font-size: 0.68rem; line-height: 1.7;
+}
+
+/* ── METRICS STRIP ── */
+.metrics-strip {
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 0;
+  background: rgba(34,211,165,0.02);
+}
+.metrics-inner {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  max-width: 1100px; margin: 0 auto;
+}
+.metric-block {
+  padding: 3rem 2.5rem; text-align: center;
+  border-right: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.metric-block:last-child { border-right: none; }
+.metric-num {
+  font-family: var(--sans); font-size: 2.8rem; font-weight: 800;
+  letter-spacing: -0.04em; margin-bottom: 0.3rem;
+  background: linear-gradient(135deg, var(--text), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.metric-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; }
+.metric-sub { font-size: 0.6rem; color: var(--green); margin-top: 0.3rem; }
+
+/* ── HOW IT WORKS ── */
+.steps { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; margin-top: 4rem; }
+
+.step-list { display: flex; flex-direction: column; gap: 0; }
+.step {
+  display: flex; gap: 1.5rem; align-items: flex-start;
+  padding: 1.5rem 0; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+}
+.step:last-child { border-bottom: none; }
+.step:hover .step-content { opacity: 1; }
+.step-num {
+  font-family: var(--sans); font-size: 0.7rem; font-weight: 800;
+  color: var(--green); width: 28px; height: 28px;
+  border: 1px solid rgba(34,211,165,0.3); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 0.1rem;
+  background: rgba(34,211,165,0.06);
+}
+.step-content { opacity: 0.7; transition: opacity 0.2s; }
+.step-title { font-family: var(--sans); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+.step-desc { font-size: 0.73rem; color: var(--muted); line-height: 1.7; }
+
+.step-visual {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px;
+  padding: 2rem; position: sticky; top: 6rem;
+}
+.sv-header { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.sv-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── PRICING ── */
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 4rem; }
+
+.price-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 2rem; position: relative;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.price-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+.price-card.featured {
+  border-color: rgba(34,211,165,0.3);
+  background: linear-gradient(180deg, rgba(34,211,165,0.05) 0%, var(--bg2) 40%);
+  box-shadow: 0 0 40px rgba(34,211,165,0.08);
+}
+.featured-badge {
+  position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #080c10;
+  font-family: var(--sans); font-size: 0.6rem; font-weight: 800;
+  padding: 0.25rem 1rem; border-radius: 0 0 8px 8px; letter-spacing: 0.1em;
+}
+
+.price-tier { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 1rem; }
+.price-amount {
+  font-family: var(--sans); font-size: 2.5rem; font-weight: 800;
+  letter-spacing: -0.04em; margin-bottom: 0.2rem;
+}
+.price-amount span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+.price-desc { font-size: 0.72rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.6; }
+
+.price-divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
+
+.price-features { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; }
+.price-features li {
+  display: flex; align-items: center; gap: 0.75rem; font-size: 0.73rem; color: var(--muted);
+}
+.price-features li::before { content: '✓'; color: var(--green); font-size: 0.7rem; flex-shrink: 0; }
+.pf-muted::before { content: '—' !important; color: rgba(255,255,255,0.15) !important; }
+.pf-muted { opacity: 0.4; }
+
+.btn-plan {
+  width: 100%; padding: 0.75rem; border-radius: 8px;
+  font-family: var(--mono); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.btn-plan-outline {
+  background: none; border: 1px solid var(--border2); color: var(--text);
+}
+.btn-plan-outline:hover { border-color: var(--green-dim); color: var(--green); }
+.btn-plan-solid {
+  background: var(--green); border: none; color: #080c10;
+  font-weight: 700; font-family: var(--sans);
+  box-shadow: 0 0 20px rgba(34,211,165,0.2);
+}
+.btn-plan-solid:hover { box-shadow: 0 0 35px rgba(34,211,165,0.4); transform: translateY(-1px); }
+
+/* ── TESTIMONIALS ── */
+.testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 4rem; }
+
+.testi-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1.8rem; transition: border-color 0.3s;
+}
+.testi-card:hover { border-color: var(--border2); }
+
+.testi-quote { font-size: 0.78rem; color: var(--muted); line-height: 1.8; margin-bottom: 1.5rem; font-style: italic; }
+.testi-quote strong { color: var(--text); font-style: normal; }
+.testi-author { display: flex; align-items: center; gap: 0.75rem; }
+.testi-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-size: 0.75rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.av1 { background: linear-gradient(135deg, #22d3a5, #38bdf8); color: #080c10; }
+.av2 { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #080c10; }
+.av3 { background: linear-gradient(135deg, #a78bfa, #ec4899); color: #fff; }
+.testi-name { font-family: var(--sans); font-size: 0.8rem; font-weight: 700; }
+.testi-role { font-size: 0.65rem; color: var(--muted); }
+
+/* ── CTA ── */
+.cta-section {
+  padding: 8rem 2.5rem;
+  text-align: center; position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(34,211,165,0.06) 0%, transparent 70%);
+}
+.cta-inner { position: relative; max-width: 700px; margin: 0 auto; }
+
+.cta-h {
+  font-family: var(--sans); font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 1.2rem;
+}
+.cta-sub { color: var(--muted); font-size: 0.85rem; line-height: 1.8; margin-bottom: 2.5rem; }
+
+.cta-input-row {
+  display: flex; gap: 0.75rem; max-width: 460px; margin: 0 auto;
+}
+.cta-input {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); padding: 0.8rem 1.2rem; border-radius: 8px;
+  font-family: var(--mono); font-size: 0.8rem; outline: none;
+  transition: border-color 0.2s;
+}
+.cta-input:focus { border-color: var(--green); box-shadow: 0 0 15px rgba(34,211,165,0.1); }
+.cta-input::placeholder { color: var(--muted); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border); padding: 3rem 2.5rem;
+  max-width: 1100px; margin: 0 auto;
+}
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+.footer-brand .brand-name { font-size: 1rem; margin-bottom: 0.75rem; display: block; }
+.footer-about { font-size: 0.72rem; color: var(--muted); line-height: 1.7; margin-bottom: 1rem; }
+
+.footer-col h4 {
+  font-family: var(--sans); font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.1em; margin-bottom: 1rem; color: var(--text);
+}
+.footer-col a {
+  display: block; text-decoration: none; color: var(--muted);
+  font-size: 0.72rem; margin-bottom: 0.6rem; transition: color 0.2s;
+}
+.footer-col a:hover { color: var(--green); }
+
+.footer-bottom {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 2rem; border-top: 1px solid var(--border);
+  font-size: 0.65rem; color: var(--muted);
+}
+.footer-legal { display: flex; gap: 2rem; }
+.footer-legal a { color: var(--muted); text-decoration: none; }
+.footer-legal a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+<div class="glow-3"></div>
+
+<div class="page">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="brand-mark">CR</div>
+    <div class="brand-name">coderift</div>
+  </div>
+  <div class="nav-links">
+    <a href="#">Product</a>
+    <a href="#">Docs</a>
+    <a href="#">Pricing</a>
+    <a href="#">Blog</a>
+    <a href="#">Changelog</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-ghost">Sign in</button>
+    <button class="btn-primary">Start free →</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow"><div class="eyebrow-dot"></div> v2.4 just shipped — see what's new</div>
+  <h1>
+    Deploy with confidence.<br>
+    <span class="h1-line2">Ship. Test. Observe.</span>
+  </h1>
+  <p class="hero-sub">
+    The developer platform that watches your infrastructure, catches errors before users do, and makes on-call actually bearable.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-hero">
+      <span>→</span> Get started free
+    </button>
+    <button class="btn-outline">View live demo</button>
+  </div>
+  <div class="hero-social">
+    <div class="hero-stat"><strong>12,400+</strong> engineers</div>
+    <div class="hero-social-divider"></div>
+    <div class="hero-stat"><strong>99.97%</strong> uptime SLA</div>
+    <div class="hero-social-divider"></div>
+    <div class="hero-stat"><strong>4.9★</strong> on G2</div>
+  </div>
+</div>
+
+<!-- TERMINAL WINDOW -->
+<div class="terminal-showcase">
+  <div class="window">
+    <div class="window-bar">
+      <div class="wdot wd-r"></div>
+      <div class="wdot wd-y"></div>
+      <div class="wdot wd-g"></div>
+      <div class="window-title">coderift — deploy.ts — main branch</div>
+    </div>
+    <div class="window-tabs">
+      <div class="tab active"><div class="tab-dot"></div> deploy.ts</div>
+      <div class="tab">monitor.ts</div>
+      <div class="tab">alerts.yaml</div>
+    </div>
+    <div class="window-body">
+      <div class="code-line"><span class="ln">1</span><span class="c-comment">// Coderift deploy pipeline · TypeScript SDK</span></div>
+      <div class="code-line c-blank"></div>
+      <div class="code-line"><span class="ln">3</span><span><span class="c-kw">import</span> <span class="c-sym">{</span> <span class="c-type">Coderift</span><span class="c-sym">,</span> <span class="c-type">DeployConfig</span> <span class="c-sym">}</span> <span class="c-kw">from</span> <span class="c-str">'@coderift/sdk'</span><span class="c-sym">;</span></span></div>
+      <div class="code-line c-blank"></div>
+      <div class="code-line"><span class="ln">5</span><span><span class="c-kw">const</span> <span class="c-var">client</span> <span class="c-sym">=</span> <span class="c-kw">new</span> <span class="c-type">Coderift</span><span class="c-sym">({</span></span></div>
+      <div class="code-line"><span class="ln">6</span><span>&nbsp;&nbsp;<span class="c-var">apiKey</span><span class="c-sym">:</span> <span class="c-var">process</span><span class="c-sym">.</span><span class="c-fn">env</span><span class="c-sym">.</span><span class="c-type">CODERIFT_KEY</span><span class="c-sym">,</span></span></div>
+      <div class="code-line"><span class="ln">7</span><span>&nbsp;&nbsp;<span class="c-var">region</span><span class="c-sym">:</span> <span class="c-str">'us-east-1'</span><span class="c-sym">,</span></span></div>
+      <div class="code-line"><span class="ln">8</span><span><span class="c-sym">});</span></span></div>
+      <div class="code-line c-blank"></div>
+      <div class="code-line"><span class="ln">10</span><span><span class="c-kw">const</span> <span class="c-var">deploy</span> <span class="c-sym">=</span> <span class="c-kw">await</span> <span class="c-var">client</span><span class="c-sym">.</span><span class="c-fn">deploy</span><span class="c-sym">({</span></span></div>
+      <div class="code-line"><span class="ln">11</span><span>&nbsp;&nbsp;<span class="c-var">service</span><span class="c-sym">:</span> <span class="c-str">'api-gateway'</span><span class="c-sym">,</span></span></div>
+      <div class="code-line"><span class="ln">12</span><span>&nbsp;&nbsp;<span class="c-var">image</span><span class="c-sym">:</span> <span class="c-str">`ghcr.io/acme/api:${<span class="c-var">SHA</span>}`</span><span class="c-sym">,</span></span></div>
+      <div class="code-line"><span class="ln">13</span><span>&nbsp;&nbsp;<span class="c-var">strategy</span><span class="c-sym">:</span> <span class="c-str">'canary'</span><span class="c-sym">,</span> &nbsp;<span class="c-comment">// 5% → 50% → 100%</span></span></div>
+      <div class="code-line"><span class="ln">14</span><span>&nbsp;&nbsp;<span class="c-var">rollbackOn</span><span class="c-sym">:</span> <span class="c-sym">{</span> <span class="c-var">errorRate</span><span class="c-sym">:</span> <span class="c-num">0.01</span><span class="c-sym">,</span> <span class="c-var">p99</span><span class="c-sym">:</span> <span class="c-num">500</span> <span class="c-sym">},</span></span></div>
+      <div class="code-line"><span class="ln">15</span><span><span class="c-sym">});</span></span></div>
+      <div class="code-line c-blank"></div>
+      <div class="code-line"><span class="ln">17</span><span><span class="c-var">console</span><span class="c-sym">.</span><span class="c-fn">log</span><span class="c-sym">(</span><span class="c-str">`✓ Deployed in <span class="c-sym">${<span class="c-var">deploy</span><span class="c-sym">.</span><span class="c-var">duration</span>}</span>ms`</span><span class="c-sym">);</span></span></div>
+    </div>
+    <div class="window-footer">
+      <div class="wf-status">
+        <div class="wf-item"><span class="wf-green">●</span>&nbsp;TypeScript 5.4</div>
+        <div class="wf-item">deploy.ts</div>
+        <div class="wf-item">UTF-8</div>
+      </div>
+      <div class="wf-status">
+        <div class="wf-item wf-green">✓ 0 errors · 0 warnings</div>
+        <div class="wf-item">Ln 17, Col 1</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- METRICS -->
+<div class="metrics-strip">
+  <div class="metrics-inner">
+    <div class="metric-block">
+      <div class="metric-num">4.2ms</div>
+      <div class="metric-label">AVERAGE P99 LATENCY</div>
+      <div class="metric-sub">↓ 60% from your current stack</div>
+    </div>
+    <div class="metric-block">
+      <div class="metric-num">99.97%</div>
+      <div class="metric-label">PLATFORM UPTIME SLA</div>
+      <div class="metric-sub">Backed by contract</div>
+    </div>
+    <div class="metric-block">
+      <div class="metric-num">38s</div>
+      <div class="metric-label">MEDIAN DEPLOY TIME</div>
+      <div class="metric-sub">From git push to live</div>
+    </div>
+    <div class="metric-block">
+      <div class="metric-num">$0</div>
+      <div class="metric-label">COST TO GET STARTED</div>
+      <div class="metric-sub">No credit card required</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+  <div class="section-inner">
+    <div class="section-tag">features</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:end; margin-bottom:0;">
+      <h2 class="section-h">Everything your team needs to ship.</h2>
+      <p class="section-sub" style="margin-bottom:0.2rem">Built for the way modern teams actually work — fast iterations, zero downtime, full observability out of the box.</p>
+    </div>
+
+    <div class="features-grid" style="margin-top:3rem">
+      <div class="feat-card">
+        <div class="feat-icon fi-g">⚡</div>
+        <div class="feat-title">Instant Rollbacks</div>
+        <div class="feat-desc">One command, one second. If your error rate spikes, Coderift detects and reverts before your pager goes off.</div>
+        <div class="feat-code">
+          <span class="c-sym">$</span> <span class="c-fn">rift</span> rollback --to <span class="c-str">v2.3.1</span><br>
+          <span class="c-type">✓</span> <span class="c-var">Rolled back in 1.2s</span>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-b">◈</div>
+        <div class="feat-title">Live Error Tracking</div>
+        <div class="feat-desc">Stack traces, user context, and session replays — all linked to the exact deploy that introduced the bug.</div>
+        <div class="feat-code">
+          <span class="c-red">TypeError</span><span class="c-sym">:</span> <span class="c-var">Cannot read 'id'</span><br>
+          <span class="c-comment">→ Introduced in deploy #441</span>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-a">◎</div>
+        <div class="feat-title">Canary Deployments</div>
+        <div class="feat-desc">Route 5% of traffic to your new version. Watch metrics. Promote or kill. No drama, no downtime.</div>
+        <div class="feat-code">
+          <span class="c-kw">strategy</span><span class="c-sym">:</span> <span class="c-str">canary</span><br>
+          <span class="c-kw">stages</span><span class="c-sym">:</span> <span class="c-sym">[</span><span class="c-num">5</span><span class="c-sym">,</span> <span class="c-num">25</span><span class="c-sym">,</span> <span class="c-num">100</span><span class="c-sym">]</span>
+        </div>
+      </div>
+      <div class="feat-card feat-row2">
+        <div class="feat-icon fi-g">⬡</div>
+        <div class="feat-title">Distributed Tracing</div>
+        <div class="feat-desc">Follow a request across 40 microservices in one waterfall view. Find the slow query. Fix it. Move on.</div>
+      </div>
+      <div class="feat-card feat-row2">
+        <div class="feat-icon fi-b">△</div>
+        <div class="feat-title">Smart Alerting</div>
+        <div class="feat-desc">ML-powered anomaly detection that learns your baseline. Fewer false positives. More sleep.</div>
+      </div>
+      <div class="feat-card feat-row2">
+        <div class="feat-icon fi-a">◻</div>
+        <div class="feat-title">Team Dashboards</div>
+        <div class="feat-desc">Custom DORA metrics, sprint health, and incident timelines. Ship the report to your CTO in one click.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background: rgba(34,211,165,0.02); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-tag">how it works</div>
+    <h2 class="section-h">Up in minutes.<br>Useful on day one.</h2>
+
+    <div class="steps">
+      <div class="step-list">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Connect your repo</div>
+            <div class="step-desc">Link GitHub, GitLab, or Bitbucket. Coderift reads your existing CI config and suggests optimizations automatically.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Add one line of SDK</div>
+            <div class="step-desc">Drop in our lightweight agent. 47KB, zero runtime overhead, works with any language or framework.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Set your thresholds</div>
+            <div class="step-desc">Define what "broken" means for your app. Error rate, latency, custom business metrics. We'll alert on the ones that matter.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Ship with confidence</div>
+            <div class="step-desc">Push code. Watch the deploy. Sleep soundly knowing Coderift is watching every request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-visual">
+        <div class="sv-header">
+          <div class="sv-dot" style="background:#ff5f57"></div>
+          <div class="sv-dot" style="background:#febc2e"></div>
+          <div class="sv-dot" style="background:#28c840"></div>
+        </div>
+        <div style="font-size:0.72rem; line-height:1.9;">
+          <div><span class="c-muted" style="color:var(--muted)">$</span> <span class="c-fn" style="color:var(--blue)">npm</span> <span style="color:var(--text)">install @coderift/sdk</span></div>
+          <div style="color:var(--muted); font-size:0.65rem; margin:0.3rem 0 0.8rem">+ 1 package added in 1.2s</div>
+          <div><span class="c-muted" style="color:var(--muted)">$</span> <span class="c-fn" style="color:var(--blue)">rift</span> <span style="color:var(--text)">init</span></div>
+          <div style="color:var(--green); font-size:0.65rem; margin:0.2rem 0;">✓ Detected: Node 20 · Docker · GitHub Actions</div>
+          <div style="color:var(--green); font-size:0.65rem; margin-bottom:0.8rem;">✓ Config written to coderift.yaml</div>
+          <div><span class="c-muted" style="color:var(--muted)">$</span> <span class="c-fn" style="color:var(--blue)">git</span> <span style="color:var(--text)">push origin main</span></div>
+          <div style="margin-top:0.8rem; padding:0.75rem; background:rgba(34,211,165,0.06); border:1px solid rgba(34,211,165,0.15); border-radius:6px; font-size:0.65rem;">
+            <div style="color:var(--green); margin-bottom:0.4rem">⬡ Coderift · Deploy #512</div>
+            <div style="color:var(--muted)">Building image ··············· <span style="color:var(--green)">✓</span></div>
+            <div style="color:var(--muted)">Running tests ················ <span style="color:var(--green)">✓</span></div>
+            <div style="color:var(--muted)">Canary → 5% traffic ·········· <span style="color:var(--green)">✓</span></div>
+            <div style="color:var(--muted)">Promoting to 100% ············ <span style="color:var(--green)">✓</span></div>
+            <div style="color:var(--green); margin-top:0.5rem">→ Live in 38s · 0 errors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="section-inner">
+    <div class="section-tag">testimonials</div>
+    <h2 class="section-h">Loved by engineering teams.</h2>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <p class="testi-quote">"We went from <strong>deploying once a week</strong> — scared — to 12 times a day. Coderift's canary rollouts are genuinely magic."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av1">MK</div>
+          <div>
+            <div class="testi-name">Maya Krishnan</div>
+            <div class="testi-role">VP Eng · Forma Labs</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <p class="testi-quote">"Our on-call rotation used to be miserable. Now we get <strong>one alert a week, max</strong>, and it's always the right one."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av2">JR</div>
+          <div>
+            <div class="testi-name">James Reeve</div>
+            <div class="testi-role">SRE Lead · Stackwise</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <p class="testi-quote">"Setup took 20 minutes. We caught a <strong>memory leak in production</strong> that same afternoon that would've cost us hours to debug."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av3">SC</div>
+          <div>
+            <div class="testi-name">Sofia Chen</div>
+            <div class="testi-role">CTO · Rebound AI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section style="background: rgba(34,211,165,0.015); border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-tag">pricing</div>
+    <div style="text-align:center; max-width:500px; margin:0 auto 0">
+      <h2 class="section-h">Simple, honest pricing.</h2>
+      <p class="section-sub" style="max-width:100%">Start free. Scale as you grow. No per-seat surprises.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">HOBBY</div>
+        <div class="price-amount">$0 <span>/ mo</span></div>
+        <div class="price-desc">For side projects and exploration. No credit card needed.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>3 services</li>
+          <li>7-day log retention</li>
+          <li>Email alerts</li>
+          <li>Community support</li>
+          <li class="pf-muted">Canary deployments</li>
+          <li class="pf-muted">SSO / SAML</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline">Start free →</button>
+      </div>
+      <div class="price-card featured">
+        <div class="featured-badge">MOST POPULAR</div>
+        <div class="price-tier">TEAM</div>
+        <div class="price-amount">$79 <span>/ mo</span></div>
+        <div class="price-desc">Everything your team needs to ship fast without breaking things.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>Unlimited services</li>
+          <li>30-day log retention</li>
+          <li>Canary deployments</li>
+          <li>Slack + PagerDuty alerts</li>
+          <li>Distributed tracing</li>
+          <li class="pf-muted">SSO / SAML</li>
+        </ul>
+        <button class="btn-plan btn-plan-solid">Get started →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">ENTERPRISE</div>
+        <div class="price-amount">Custom</div>
+        <div class="price-desc">For teams that need SLAs, compliance, and dedicated support.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>Everything in Team</li>
+          <li>1-year log retention</li>
+          <li>SSO / SAML</li>
+          <li>Custom SLA</li>
+          <li>Dedicated SRE support</li>
+          <li>On-prem option</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline">Talk to sales →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="cta-inner">
+    <h2 class="cta-h">Start shipping with confidence.</h2>
+    <p class="cta-sub">Join 12,400 engineers who deploy faster and sleep better. Free forever. No card required.</p>
+    <div class="cta-input-row">
+      <input class="cta-input" type="email" placeholder="your@email.com">
+      <button class="btn-hero" style="white-space:nowrap; padding:0.8rem 1.5rem; font-size:0.82rem">Start free →</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem">
+        <div class="brand-mark" style="width:26px;height:26px;font-size:0.6rem">CR</div>
+        <span class="brand-name" style="font-size:0.95rem">coderift</span>
+      </div>
+      <p class="footer-about">The deploy platform for teams that ship fast and sleep well. Built by engineers, for engineers.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#">Features</a>
+      <a href="#">Pricing</a>
+      <a href="#">Changelog</a>
+      <a href="#">Roadmap</a>
+    </div>
+    <div class="footer-col">
+      <h4>Developers</h4>
+      <a href="#">Documentation</a>
+      <a href="#">API Reference</a>
+      <a href="#">SDKs</a>
+      <a href="#">Status</a>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Blog</a>
+      <a href="#">Careers</a>
+      <a href="#">Security</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Coderift, Inc.</span>
+    <div class="footer-legal">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Cookies</a>
+    </div>
+  </div>
+</footer>
+
+</div>
+</body>
+</html>
